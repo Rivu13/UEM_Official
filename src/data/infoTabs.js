@@ -22,7 +22,7 @@ export const infoTabs = [
     "Total Hostel capacity : 1100",
     "Total Buses for the students : 14",
     "Total Number of Faculty Members : 239",
-    "Total Number of Support Staff : 116",
+    "Total Number of Support Staff : 110",
   ],
   notice: {
     intro: "The IEM-UEM group's sole admission offices are located at the following addresses:",
