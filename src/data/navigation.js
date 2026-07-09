@@ -1,51 +1,39 @@
+import { slugify } from "../utils/slugify"
+
 export const topBarLinks = [
   { label: "Faculty Login", href: "#" },
   { label: "Student Login", href: "#" },
   { label: "Contact Us", href: "#" },
 ]
 
+function navItem(label, dropdownLabels = []) {
+  const path = `/${slugify(label)}`
+  const dropdown = dropdownLabels.map((childLabel) => ({
+    label: childLabel,
+    path: `${path}/${slugify(childLabel)}`,
+  }))
+
+  return { label, path, dropdown: dropdown.length ? dropdown : undefined }
+}
+
 export const primaryNav = [
-  { label: "Home", href: "#" },
-  {
-    label: "About IEM UEM Group",
-    href: "#",
-    dropdown: ["Overview", "Chairman's Message", "Vision & Mission", "Governing Body"],
-  },
-  {
-    label: "Admission",
-    href: "#",
-    dropdown: ["UG Admission", "PG Admission", "Ph.D Admission", "Scholarship"],
-  },
-  { label: "IEMJEE 2026", href: "#" },
-  { label: "UEM Jaipur Campus", href: "#" },
-  { label: "UEM Kolkata Campus", href: "#" },
-  { label: "Conferences", href: "#" },
+  { label: "Home", path: "/" },
+  navItem("About IEM UEM Group", ["Overview", "Chairman's Message", "Vision & Mission", "Governing Body"]),
+  navItem("Admission", ["UG Admission", "PG Admission", "Ph.D Admission", "Scholarship"]),
+  navItem("IEMJEE 2026"),
+  navItem("UEM Jaipur Campus"),
+  navItem("UEM Kolkata Campus"),
+  navItem("Conferences"),
 ]
 
 export const secondaryNav = [
-  {
-    label: "UEM Kolkata",
-    href: "#",
-    dropdown: ["Departments", "Faculty", "Facilities", "Placements"],
-  },
-  {
-    label: "UEM Jaipur",
-    href: "#",
-    dropdown: ["Departments", "Faculty", "Facilities", "Placements"],
-  },
-  { label: "Approvals", href: "#", dropdown: ["UGC", "AICTE", "NAAC"] },
-  {
-    label: "News & Achievements",
-    href: "#",
-    dropdown: ["Latest News", "Achievements", "Press Release"],
-  },
-  { label: "Gallery", href: "#", dropdown: ["Photo Gallery", "Video Gallery"] },
-  { label: "LMS", href: "#" },
-  { label: "AI Tutor", href: "#" },
-  { label: "Alumni", href: "#" },
-  {
-    label: "Patent and Project",
-    href: "#",
-    dropdown: ["Patents", "Projects", "Research Papers"],
-  },
+  navItem("UEM Kolkata", ["Departments", "Faculty", "Facilities", "Placements"]),
+  navItem("UEM Jaipur", ["Departments", "Faculty", "Facilities", "Placements"]),
+  navItem("Approvals", ["UGC", "AICTE", "NAAC"]),
+  navItem("News & Achievements", ["Latest News", "Achievements", "Press Release"]),
+  navItem("Gallery", ["Photo Gallery", "Video Gallery"]),
+  navItem("LMS"),
+  navItem("AI Tutor"),
+  navItem("Alumni"),
+  navItem("Patent and Project", ["Patents", "Projects", "Research Papers"]),
 ]

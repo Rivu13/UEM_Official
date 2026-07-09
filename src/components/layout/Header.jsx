@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { Link } from "react-router-dom"
 import { ChevronDown, Menu, X } from "lucide-react"
 import { AnimatePresence, motion } from "framer-motion"
 import TopBar from "./TopBar"
@@ -32,9 +33,9 @@ export default function Header() {
 
       <div className={`bg-white transition-shadow duration-300 ${scrolled ? "shadow-lg" : "shadow-sm"}`}>
         <div className="mx-auto flex h-20 max-w-[1400px] items-center justify-between px-4 sm:px-6">
-          <a href="/" className="flex shrink-0 items-center">
+          <Link to="/" className="flex shrink-0 items-center">
             <img src={uemLogo} alt="UEM - University of Engineering & Management" className="h-14 w-auto object-contain sm:h-16" />
-          </a>
+          </Link>
 
           <nav className="hidden items-center gap-6 lg:flex">
             {primaryNav.map((item) => (
@@ -89,7 +90,7 @@ export default function Header() {
               </div>
               <div className="flex flex-col gap-0 p-4">
                 {[...primaryNav, ...secondaryNav].map((item) => (
-                  <MobileNavItem key={item.label} item={item} />
+                  <MobileNavItem key={item.label} item={item} onNavigate={() => setMobileOpen(false)} />
                 ))}
               </div>
             </motion.div>
@@ -100,31 +101,36 @@ export default function Header() {
   )
 }
 
-function MobileNavItem({ item }) {
+function MobileNavItem({ item, onNavigate }) {
   const [open, setOpen] = useState(false)
   const hasDropdown = Boolean(item.dropdown?.length)
 
   return (
     <div className="border-b border-slate-100">
-      <button
-        type="button"
-        onClick={() => hasDropdown && setOpen((o) => !o)}
-        className="flex w-full items-center justify-between py-3 text-left font-bold text-slate-800"
-      >
-        {item.label}
+      <div className="flex items-center justify-between">
+        <Link to={item.path} onClick={onNavigate} className="flex-1 py-3 text-left font-bold text-slate-800">
+          {item.label}
+        </Link>
         {hasDropdown && (
-          <ChevronDown
-            className="h-4 w-4 transition-transform duration-200"
-            style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
-          />
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            aria-label={`Toggle ${item.label} submenu`}
+            className="p-3 text-slate-500"
+          >
+            <ChevronDown
+              className="h-4 w-4 transition-transform duration-200"
+              style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
+            />
+          </button>
         )}
-      </button>
+      </div>
       {hasDropdown && open && (
         <div className="flex flex-col gap-1 pb-2 pl-3">
           {item.dropdown.map((sub) => (
-            <a key={sub} href="#" className="py-1.5 text-sm font-semibold text-slate-600">
-              {sub}
-            </a>
+            <Link key={sub.path} to={sub.path} onClick={onNavigate} className="py-1.5 text-sm font-semibold text-slate-600">
+              {sub.label}
+            </Link>
           ))}
         </div>
       )}

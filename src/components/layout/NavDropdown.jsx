@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { Link } from "react-router-dom"
 import { ChevronDown } from "lucide-react"
 import { AnimatePresence, motion } from "framer-motion"
 
@@ -12,8 +13,8 @@ export default function NavDropdown({ item, variant = "light" }) {
       onMouseEnter={() => hasDropdown && setOpen(true)}
       onMouseLeave={() => hasDropdown && setOpen(false)}
     >
-      <a
-        href={item.href}
+      <Link
+        to={item.path}
         className={`flex items-center gap-1 py-2 text-[13.5px] font-bold transition-colors duration-200 ${
           variant === "dark"
             ? "text-brand-navy hover:text-brand-gold-dark"
@@ -27,7 +28,7 @@ export default function NavDropdown({ item, variant = "light" }) {
             style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
           />
         )}
-      </a>
+      </Link>
 
       <AnimatePresence>
         {open && hasDropdown && (
@@ -39,13 +40,13 @@ export default function NavDropdown({ item, variant = "light" }) {
             className="absolute left-0 top-full z-50 min-w-[220px] rounded-xl bg-white py-2 shadow-2xl ring-1 ring-black/5"
           >
             {item.dropdown.map((sub) => (
-              <li key={sub}>
-                <a
-                  href="#"
+              <li key={sub.path}>
+                <Link
+                  to={sub.path}
                   className="block px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-brand-gold/10 hover:text-brand-navy"
                 >
-                  {sub}
-                </a>
+                  {sub.label}
+                </Link>
               </li>
             ))}
           </motion.ul>
