@@ -76,8 +76,8 @@ export default function HeroSlider({ onApplyClick }) {
         </motion.div>
       </AnimatePresence>
 
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-brand-navy-dark via-brand-navy-dark/50 to-brand-navy-dark/10" />
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-brand-navy-dark/85 via-transparent to-transparent" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-brand-navy-dark/75 via-brand-navy-dark/25 to-transparent" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-brand-navy-dark/55 via-transparent to-transparent" />
 
       <div className="relative z-10 mx-auto flex h-full max-w-[1400px] items-end px-6 pb-20 sm:px-10 sm:pb-24 lg:pb-28">
         <AnimatePresence mode="wait">
