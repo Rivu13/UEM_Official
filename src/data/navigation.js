@@ -6,20 +6,25 @@ export const topBarLinks = [
   { label: "Contact Us", href: "#" },
 ]
 
-function navItem(label, dropdownLabels = []) {
+function navItem(label, dropdownLabels = [], options = {}) {
   const path = `/${slugify(label)}`
   const dropdown = dropdownLabels.map((childLabel) => ({
     label: childLabel,
     path: `${path}/${slugify(childLabel)}`,
   }))
 
-  return { label, path, dropdown: dropdown.length ? dropdown : undefined }
+  return {
+    label,
+    path,
+    dropdown: dropdown.length ? dropdown : undefined,
+    linkable: options.linkable !== false,
+  }
 }
 
 export const primaryNav = [
-  { label: "Home", path: "/" },
-  navItem("About IEM UEM Group", ["Overview", "Chairman's Message", "Vision & Mission", "Governing Body"]),
-  navItem("Admission", ["UG Admission", "PG Admission", "Ph.D Admission", "Scholarship"]),
+  { label: "Home", path: "/", linkable: true },
+  navItem("About IEM UEM Group", ["About Us", "Management", "Vision & Mission"], { linkable: false }),
+  navItem("Admission", ["Admissions", "Provisional Admission"], { linkable: false }),
   navItem("IEMJEE 2026"),
   navItem("UEM Jaipur Campus"),
   navItem("UEM Kolkata Campus"),
@@ -27,10 +32,52 @@ export const primaryNav = [
 ]
 
 export const secondaryNav = [
-  navItem("UEM Kolkata", ["Departments", "Faculty", "Facilities", "Placements"]),
-  navItem("UEM Jaipur", ["Departments", "Faculty", "Facilities", "Placements"]),
-  navItem("Approvals", ["UGC", "AICTE", "NAAC"]),
-  navItem("News & Achievements", ["Latest News", "Achievements", "Press Release"]),
+  navItem("UEM Kolkata", [
+    "Placements",
+    "Courses",
+    "Syllabus",
+    "Scholarships",
+    "Academic Calendar",
+    "Holiday List",
+    "Why UEM?",
+    "3 Continent (3C) Programmes",
+    "Study Abroad Program (SAP)",
+  ]),
+  navItem("UEM Jaipur", [
+    "Placements",
+    "Courses",
+    "Syllabus",
+    "Lesson Plan",
+    "Laboratories",
+    "Faculty",
+    "Scholarships",
+    "Academic Calendar",
+    "Holiday List",
+    "Why UEM?",
+    "ACM Student Chapter",
+    "UEM Aeromodelling Club",
+    "Institute of Engineering and Management, Jaipur",
+    "Continent (3C) Programmes",
+    "Study Abroad Program (SAP)",
+  ]),
+  navItem("Approvals", ["UEM Jaipur", "UEM Kolkata"]),
+  navItem("News & Achievements", [
+    "News & Articles",
+    "University Daily News",
+    "Industry visits & interactions",
+    "Community Development",
+    "Conferences",
+    "Workshops & Seminars",
+    "Faculty Development Programs",
+    "Upcoming Events",
+    "Awards & Achievements",
+    "Academic visits & interactions",
+    "Alumni Interactions",
+    "Fests",
+    "Sports",
+    "Regular Placement Activities",
+    "Other events",
+  ]),
   navItem("Gallery", ["Photo Gallery", "Video Gallery"]),
   navItem("LMS"),
   navItem("AI Tutor"),

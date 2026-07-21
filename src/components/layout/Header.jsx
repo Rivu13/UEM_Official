@@ -104,13 +104,24 @@ export default function Header() {
 function MobileNavItem({ item, onNavigate }) {
   const [open, setOpen] = useState(false)
   const hasDropdown = Boolean(item.dropdown?.length)
+  const isLinkable = item.linkable !== false
 
   return (
     <div className="border-b border-slate-100">
       <div className="flex items-center justify-between">
-        <Link to={item.path} onClick={onNavigate} className="flex-1 py-3 text-left font-bold text-slate-800">
-          {item.label}
-        </Link>
+        {isLinkable ? (
+          <Link to={item.path} onClick={onNavigate} className="flex-1 py-3 text-left font-bold text-slate-800">
+            {item.label}
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            className="flex-1 py-3 text-left font-bold text-slate-800"
+          >
+            {item.label}
+          </button>
+        )}
         {hasDropdown && (
           <button
             type="button"

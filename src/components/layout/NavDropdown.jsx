@@ -6,6 +6,23 @@ import { AnimatePresence, motion } from "framer-motion"
 export default function NavDropdown({ item, variant = "light" }) {
   const [open, setOpen] = useState(false)
   const hasDropdown = Boolean(item.dropdown?.length)
+  const isLinkable = item.linkable !== false
+
+  const labelClassName = `flex items-center gap-1 py-2 text-[13.5px] font-bold transition-colors duration-200 ${
+    variant === "dark" ? "text-brand-navy hover:text-brand-gold-dark" : "text-white hover:text-brand-gold"
+  }`
+
+  const labelContent = (
+    <>
+      {item.label}
+      {hasDropdown && (
+        <ChevronDown
+          className="h-3.5 w-3.5 transition-transform duration-200"
+          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
+        />
+      )}
+    </>
+  )
 
   return (
     <div
@@ -13,22 +30,19 @@ export default function NavDropdown({ item, variant = "light" }) {
       onMouseEnter={() => hasDropdown && setOpen(true)}
       onMouseLeave={() => hasDropdown && setOpen(false)}
     >
-      <Link
-        to={item.path}
-        className={`flex items-center gap-1 py-2 text-[13.5px] font-bold transition-colors duration-200 ${
-          variant === "dark"
-            ? "text-brand-navy hover:text-brand-gold-dark"
-            : "text-white hover:text-brand-gold"
-        }`}
-      >
-        {item.label}
-        {hasDropdown && (
-          <ChevronDown
-            className="h-3.5 w-3.5 transition-transform duration-200"
-            style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
-          />
-        )}
-      </Link>
+      {isLinkable ? (
+        <Link to={item.path} className={labelClassName}>
+          {labelContent}
+        </Link>
+      ) : (
+        <button
+          type="button"
+          onClick={() => hasDropdown && setOpen((o) => !o)}
+          className={`${labelClassName} cursor-default`}
+        >
+          {labelContent}
+        </button>
+      )}
 
       <AnimatePresence>
         {open && hasDropdown && (

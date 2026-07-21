@@ -3,7 +3,7 @@ import { footerColumns } from "../data/footer"
 
 function flattenNavRoutes(items) {
   return items.flatMap((item) => {
-    const ownRoute = item.path === "/" ? [] : [{ path: item.path, title: item.label }]
+    const ownRoute = item.path === "/" || item.linkable === false ? [] : [{ path: item.path, title: item.label }]
     const childRoutes = item.dropdown?.map((child) => ({ path: child.path, title: child.label })) ?? []
     return [...ownRoute, ...childRoutes]
   })
