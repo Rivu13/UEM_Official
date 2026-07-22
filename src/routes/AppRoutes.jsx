@@ -7,6 +7,8 @@ import VisionMissionPage from "../pages/VisionMissionPage"
 import AdmissionsPage from "../pages/AdmissionsPage"
 import AdmissionsApplyPage from "../pages/AdmissionsApplyPage"
 import AdmissionsFeeStructurePage from "../pages/AdmissionsFeeStructurePage"
+import ProvisionalAdmissionPage from "../pages/ProvisionalAdmissionPage"
+import CertificateCoursesAdmissionPage from "../pages/CertificateCoursesAdmissionPage"
 import GenericPage from "../pages/GenericPage"
 import NotFoundPage from "../pages/NotFoundPage"
 import { pageRoutes } from "./pageRoutes"
@@ -18,6 +20,8 @@ const customPages = {
   "/admission/admissions": AdmissionsPage,
   "/admission/admissions/apply": AdmissionsApplyPage,
   "/admission/admissions/fee-structure": AdmissionsFeeStructurePage,
+  "/admission/provisional-admission": ProvisionalAdmissionPage,
+  "/admission/admissions/certificate-courses": CertificateCoursesAdmissionPage,
 }
 
 export default function AppRoutes() {

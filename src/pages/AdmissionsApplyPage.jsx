@@ -114,10 +114,10 @@ export default function AdmissionsApplyPage() {
                 </div>
 
                 <Link
-                  to="/admission/provisional-admission"
+                  to={appliedElsewhere ? "/admission/provisional-admission" : "/"}
                   className="mt-6 inline-block rounded-lg bg-brand-navy px-6 py-3 text-sm font-bold text-white shadow-md transition-colors hover:bg-brand-navy-light"
                 >
-                  Take Provisional Admission
+                  {appliedElsewhere ? "Take Provisional Admission" : "Apply for IEMJEE"}
                 </Link>
               </div>
 
@@ -125,12 +125,12 @@ export default function AdmissionsApplyPage() {
                 <h2 className="text-base font-extrabold text-brand-navy sm:text-lg">Certification Programs</h2>
                 <p className="mt-2 text-sm text-slate-600">Take admission for certification programs here:</p>
 
-                <a
-                  href="#"
+                <Link
+                  to="/admission/admissions/certificate-courses"
                   className="mt-6 inline-block rounded-lg bg-brand-navy px-6 py-3 text-sm font-bold text-white shadow-md transition-colors hover:bg-brand-navy-light"
                 >
                   Apply for Admission for Certificate Courses
-                </a>
+                </Link>
               </div>
             </div>
           </div>
