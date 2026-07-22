@@ -1,12 +1,22 @@
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import AdmissionStepper from "../components/admissions/AdmissionStepper"
+import PaymentResultModal from "../components/admissions/PaymentResultModal"
 import NewsAchievementsSection from "../components/home/NewsAchievementsSection"
-import { createRazorpayOrder, fetchPaymentCatalog, loadRazorpayScript, openRazorpayCheckout } from "../utils/razorpay"
+import {
+  createRazorpayOrder,
+  fetchPaymentCatalog,
+  loadRazorpayScript,
+  openRazorpayCheckout,
+  verifyRazorpayPayment,
+} from "../utils/razorpay"
 import { toDigitsOnly } from "../utils/inputFormatters"
 
-const CATALOG_ENDPOINT = "/api/v1/payment/catalog"
-const CREATE_ORDER_ENDPOINT = "/api/v1/payment/order"
+const CATALOG_ENDPOINT = "payment/catalog?type=certificate"
+const CREATE_ORDER_ENDPOINT = "payment/order"
+const VERIFY_PAYMENT_ENDPOINT = "payment/verify"
+
+const INITIAL_FORM_DATA = { name: "", email: "", phone: "", course: "" }
 
 const LEVEL_BUCKETS = [
   { bucket: "Beginner", levels: ["A1", "A2"] },
@@ -33,9 +43,10 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 export default function CertificateCoursesAdmissionPage() {
   const [step, setStep] = useState(1)
   const [catalog, setCatalog] = useState({ status: "loading", general: [], languages: [], levels: [], keyId: "" })
-  const [paymentStatus, setPaymentStatus] = useState({ state: "idle" })
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [paymentResult, setPaymentResult] = useState(null)
   const [errors, setErrors] = useState({})
-  const [formData, setFormData] = useState({ name: "", email: "", phone: "", course: "", language: "" })
+  const [formData, setFormData] = useState(INITIAL_FORM_DATA)
 
   useEffect(() => {
     fetchPaymentCatalog(CATALOG_ENDPOINT)
@@ -53,8 +64,10 @@ export default function CertificateCoursesAdmissionPage() {
       )
   }, [])
 
-  const isLanguageCourse = formData.course.startsWith("level:")
-  const selectedLevel = isLanguageCourse ? formData.course.slice("level:".length) : null
+  const isLanguageCourse = formData.course.startsWith("language:")
+  const [selectedLanguage, selectedLevel] = isLanguageCourse
+    ? formData.course.slice("language:".length).split("||")
+    : [null, null]
   const selectedGeneral = catalog.general.find((course) => `general:${course.code}` === formData.course)
   const selectedFee = isLanguageCourse
     ? catalog.levels.find((l) => l.level === selectedLevel)?.amountDisplay ?? 0
@@ -70,6 +83,7 @@ export default function CertificateCoursesAdmissionPage() {
     if (!formData.email.trim()) nextErrors.email = "Email is required."
     else if (!emailPattern.test(formData.email.trim())) nextErrors.email = "Enter a valid email address."
     if (!formData.phone.trim()) nextErrors.phone = "Phone number is required."
+    else if (formData.phone.length !== 10) nextErrors.phone = "Enter a valid 10-digit phone number."
 
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length === 0) setStep(2)
@@ -80,18 +94,23 @@ export default function CertificateCoursesAdmissionPage() {
     setStep(1)
   }
 
+  const resetForm = () => {
+    setFormData(INITIAL_FORM_DATA)
+    setErrors({})
+    setStep(1)
+  }
+
   const handleMakePayment = async () => {
     const nextErrors = {}
     if (!formData.course) nextErrors.course = "Please select a course."
-    if (isLanguageCourse && !formData.language) nextErrors.language = "Please select a language."
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0) return
 
-    setPaymentStatus({ state: "processing" })
+    setIsProcessing(true)
 
     try {
       const course = isLanguageCourse
-        ? { category: "LANGUAGE", language: formData.language, level: selectedLevel }
+        ? { category: "LANGUAGE", language: selectedLanguage, level: selectedLevel }
         : { category: "GENERAL", courseCode: selectedGeneral?.code }
 
       const order = await createRazorpayOrder(CREATE_ORDER_ENDPOINT, {
@@ -107,16 +126,27 @@ export default function CertificateCoursesAdmissionPage() {
         amountRupees: selectedFee,
         keyId: catalog.keyId,
         name: "UEM Certificate Course Admission",
-        description: isLanguageCourse ? `${formData.language} ${selectedLevel}` : selectedGeneral?.name,
+        description: isLanguageCourse ? `${selectedLanguage} ${selectedLevel}` : selectedGeneral?.name,
         prefill: { name: formData.name, email: formData.email, contact: formData.phone },
-        onSuccess: (response) =>
-          setPaymentStatus({ state: "success", paymentId: response.razorpay_payment_id }),
-        onFailure: (error) => setPaymentStatus({ state: "error", message: error.message }),
+        onSuccess: async (response) => {
+          try {
+            await verifyRazorpayPayment(VERIFY_PAYMENT_ENDPOINT, response)
+            setPaymentResult({ state: "success", paymentId: response.razorpay_payment_id })
+          } catch (error) {
+            setPaymentResult({ state: "error", message: error.message })
+          }
+          resetForm()
+        },
+        onFailure: (error) => {
+          setPaymentResult({ state: "error", message: error.message })
+          resetForm()
+        },
       })
 
-      setPaymentStatus({ state: "idle" })
+      setIsProcessing(false)
     } catch (error) {
-      setPaymentStatus({ state: "error", message: error.message })
+      setPaymentResult({ state: "error", message: error.message })
+      setIsProcessing(false)
     }
   }
 
@@ -224,39 +254,16 @@ export default function CertificateCoursesAdmissionPage() {
                     <optgroup key={bucket.bucket} label={bucket.bucket}>
                       {bucket.levels.map((level) => {
                         const fee = catalog.levels.find((l) => l.level === level)?.amountDisplay
-                        return (
-                          <option key={level} value={`level:${level}`}>
-                            {catalog.languages.join("/")} {level} - {fee} INR
+                        return catalog.languages.map((language) => (
+                          <option key={`${language}-${level}`} value={`language:${language}||${level}`}>
+                            {language} {level} - {fee} INR
                           </option>
-                        )
+                        ))
                       })}
                     </optgroup>
                   ))}
                 </select>
                 {errors.course && <p className="mt-1 text-xs font-semibold text-red-500">{errors.course}</p>}
-
-                {isLanguageCourse && (
-                  <>
-                    <label className="mt-5 block text-sm font-semibold text-slate-800">
-                      Language<span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={formData.language}
-                      onChange={updateField("language")}
-                      className={`${inputClassName} mt-1.5 ${errors.language ? "border-red-400" : ""}`}
-                    >
-                      <option value="" disabled>
-                        Select Language
-                      </option>
-                      {catalog.languages.map((language) => (
-                        <option key={language} value={language}>
-                          {language}
-                        </option>
-                      ))}
-                    </select>
-                    {errors.language && <p className="mt-1 text-xs font-semibold text-red-500">{errors.language}</p>}
-                  </>
-                )}
 
                 <p className="mt-6 font-bold text-slate-800">Cancellation Policy</p>
                 <p className="mt-1 text-sm text-slate-600">No refunds can be provided on the registration fee on cancellation.</p>
@@ -270,21 +277,12 @@ export default function CertificateCoursesAdmissionPage() {
                   <button
                     type="button"
                     onClick={handleMakePayment}
-                    disabled={paymentStatus.state === "processing"}
+                    disabled={isProcessing}
                     className="rounded-md bg-green-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {paymentStatus.state === "processing" ? "Processing…" : "Make Payment"}
+                    {isProcessing ? "Processing…" : "Make Payment"}
                   </button>
                 </div>
-
-                {paymentStatus.state === "success" && (
-                  <p className="mt-4 text-sm font-semibold text-green-700">
-                    Payment successful! Reference ID: {paymentStatus.paymentId}
-                  </p>
-                )}
-                {paymentStatus.state === "error" && (
-                  <p className="mt-4 text-sm font-semibold text-red-600">{paymentStatus.message}</p>
-                )}
               </div>
             )}
           </div>
@@ -300,6 +298,8 @@ export default function CertificateCoursesAdmissionPage() {
       </section>
 
       <NewsAchievementsSection />
+
+      <PaymentResultModal result={paymentResult} onClose={() => setPaymentResult(null)} />
     </>
   )
 }

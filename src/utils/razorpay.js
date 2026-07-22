@@ -1,5 +1,6 @@
 import { siteConfig } from "../data/siteConfig"
 
+export const API_BASE_URL = "/api/v1"
 const CHECKOUT_SCRIPT_SRC = "https://checkout.razorpay.com/v1/checkout.js"
 
 let scriptLoadPromise = null
@@ -22,8 +23,8 @@ export function loadRazorpayScript() {
   return scriptLoadPromise
 }
 
-export async function fetchPaymentCatalog(endpoint) {
-  const response = await fetch(endpoint)
+export async function fetchPaymentCatalog(path) {
+  const response = await fetch(`${API_BASE_URL}/${path}`)
   const json = await response.json()
 
   if (!response.ok || !json.success) {
@@ -33,8 +34,8 @@ export async function fetchPaymentCatalog(endpoint) {
   return json.data
 }
 
-export async function createRazorpayOrder(endpoint, payload) {
-  const response = await fetch(endpoint, {
+async function postJson(path, payload, failureMessage) {
+  const response = await fetch(`${API_BASE_URL}/${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -43,18 +44,34 @@ export async function createRazorpayOrder(endpoint, payload) {
   const json = await response.json()
 
   if (!response.ok || !json.success) {
-    throw new Error(json.message || `Order creation failed (HTTP ${response.status})`)
+    throw new Error(json.message || `${failureMessage} (HTTP ${response.status})`)
   }
 
   return json.data
 }
 
+export function createRazorpayOrder(path, payload) {
+  return postJson(path, payload, "Order creation failed")
+}
+
+export function verifyRazorpayPayment(path, checkoutResponse) {
+  return postJson(
+    path,
+    {
+      razorpay_order_id: checkoutResponse.razorpay_order_id,
+      razorpay_payment_id: checkoutResponse.razorpay_payment_id,
+      razorpay_signature: checkoutResponse.razorpay_signature,
+    },
+    "Payment verification failed",
+  )
+}
+
 export function openRazorpayCheckout({ order, amountRupees, name, description, prefill, keyId, onSuccess, onFailure }) {
   const checkout = new window.Razorpay({
-    key: keyId || siteConfig.razorpayKeyId,
-    amount: order.amount ?? amountRupees * 100,
+    key: keyId || order.keyId || siteConfig.razorpayKeyId,
+    amount: order.amountPaise ?? amountRupees * 100,
     currency: order.currency ?? "INR",
-    order_id: order.order_id ?? order.id,
+    order_id: order.orderId,
     name,
     description,
     prefill,

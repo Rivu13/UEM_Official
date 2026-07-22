@@ -6,17 +6,10 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     proxy: {
-      // Local Razorpay backend — see src/utils/razorpay.js for the endpoints in use.
-      // The backend's own CORS middleware rejects the Vite dev origin, so the browser's
-      // Origin header is stripped here — the backend allows requests with no Origin (same as curl).
+      // Hosted Razorpay backend — see src/utils/razorpay.js for the endpoints in use.
       "/api": {
-        target: "http://192.168.1.250:8000",
+        target: "https://uemofficialbackend-api.iem.edu.in",
         changeOrigin: true,
-        configure: (proxy) => {
-          proxy.on("proxyReq", (proxyReq) => {
-            proxyReq.removeHeader("origin")
-          })
-        },
       },
     },
   },

@@ -1,14 +1,32 @@
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import AdmissionStepper from "../components/admissions/AdmissionStepper"
+import PaymentResultModal from "../components/admissions/PaymentResultModal"
 import NewsAchievementsSection from "../components/home/NewsAchievementsSection"
 import ratingsImage from "../assets/images/Ratings.png"
-import { createRazorpayOrder, fetchPaymentCatalog, loadRazorpayScript, openRazorpayCheckout } from "../utils/razorpay"
+import {
+  createRazorpayOrder,
+  fetchPaymentCatalog,
+  loadRazorpayScript,
+  openRazorpayCheckout,
+  verifyRazorpayPayment,
+} from "../utils/razorpay"
 import { toDigitsOnly, toMarksValue } from "../utils/inputFormatters"
 
-const CATALOG_ENDPOINT = "/api/v1/payment/catalog"
-const CREATE_ORDER_ENDPOINT = "/api/v1/payment/order"
+const CATALOG_ENDPOINT = "payment/catalog?type=provisional"
+const CREATE_ORDER_ENDPOINT = "payment/order"
+const VERIFY_PAYMENT_ENDPOINT = "payment/verify"
 const FALLBACK_FEE = 5000
+
+const INITIAL_FORM_DATA = {
+  name: "",
+  email: "",
+  phone: "",
+  programCode: "",
+  specializations: [],
+  xthMarks: "",
+  xiithMarks: "",
+}
 
 const inputClassName =
   "w-full rounded-md border border-slate-300 bg-slate-100 px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-brand-navy focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-navy/10"
@@ -24,16 +42,10 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 export default function ProvisionalAdmissionPage() {
   const [step, setStep] = useState(1)
   const [catalog, setCatalog] = useState({ status: "loading", groups: [], keyId: "" })
-  const [paymentStatus, setPaymentStatus] = useState({ state: "idle" })
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [paymentResult, setPaymentResult] = useState(null)
   const [errors, setErrors] = useState({})
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    programCode: "",
-    xthMarks: "",
-    xiithMarks: "",
-  })
+  const [formData, setFormData] = useState(INITIAL_FORM_DATA)
 
   useEffect(() => {
     fetchPaymentCatalog(CATALOG_ENDPOINT)
@@ -53,12 +65,24 @@ export default function ProvisionalAdmissionPage() {
 
   const updateMarks = (field) => (e) => setFormData((prev) => ({ ...prev, [field]: toMarksValue(e.target.value) }))
 
+  const updateProgramCode = (e) =>
+    setFormData((prev) => ({ ...prev, programCode: e.target.value, specializations: [] }))
+
+  const toggleSpecialization = (specialization) => (e) =>
+    setFormData((prev) => ({
+      ...prev,
+      specializations: e.target.checked
+        ? [...prev.specializations, specialization]
+        : prev.specializations.filter((s) => s !== specialization),
+    }))
+
   const goToStep2 = () => {
     const nextErrors = {}
     if (!formData.name.trim()) nextErrors.name = "Name is required."
     if (!formData.email.trim()) nextErrors.email = "Email is required."
     else if (!emailPattern.test(formData.email.trim())) nextErrors.email = "Enter a valid email address."
     if (!formData.phone.trim()) nextErrors.phone = "Phone number is required."
+    else if (formData.phone.length !== 10) nextErrors.phone = "Enter a valid 10-digit phone number."
 
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length === 0) setStep(2)
@@ -77,19 +101,25 @@ export default function ProvisionalAdmissionPage() {
     setStep(targetStep)
   }
 
+  const resetForm = () => {
+    setFormData(INITIAL_FORM_DATA)
+    setErrors({})
+    setStep(1)
+  }
+
   const handleMakePayment = async () => {
-    setPaymentStatus({ state: "processing" })
+    setIsProcessing(true)
 
     try {
-      // NOTE: the exact field name the backend expects for the selected program could not be
-      // confirmed — every combination tried (code, program.code, program.programCode, course.courseCode,
-      // top-level programCode, with/without `group`) returned "Invalid or unavailable program selection".
-      // This is the best structural guess (mirrors the confirmed-working certificate `course` shape).
-      // Check the backend's /api/v1/payment/order controller for the real field name if this 400s.
+      const academic = { programCode: formData.programCode }
+      if (formData.specializations.length > 0) academic.specialization = formData.specializations
+      if (formData.xthMarks) academic.tenthMarks = Number(formData.xthMarks)
+      if (formData.xiithMarks) academic.twelfthMarks = Number(formData.xiithMarks)
+
       const order = await createRazorpayOrder(CREATE_ORDER_ENDPOINT, {
         formType: "PROVISIONAL",
-        program: { group: selectedProgram?.group, code: formData.programCode },
         applicant: { name: formData.name, email: formData.email, phone: formData.phone },
+        academic,
       })
 
       await loadRazorpayScript()
@@ -101,14 +131,25 @@ export default function ProvisionalAdmissionPage() {
         name: "UEM Provisional Admission",
         description: `Provisional Admission — ${selectedProgram?.name ?? ""}`,
         prefill: { name: formData.name, email: formData.email, contact: formData.phone },
-        onSuccess: (response) =>
-          setPaymentStatus({ state: "success", paymentId: response.razorpay_payment_id }),
-        onFailure: (error) => setPaymentStatus({ state: "error", message: error.message }),
+        onSuccess: async (response) => {
+          try {
+            await verifyRazorpayPayment(VERIFY_PAYMENT_ENDPOINT, response)
+            setPaymentResult({ state: "success", paymentId: response.razorpay_payment_id })
+          } catch (error) {
+            setPaymentResult({ state: "error", message: error.message })
+          }
+          resetForm()
+        },
+        onFailure: (error) => {
+          setPaymentResult({ state: "error", message: error.message })
+          resetForm()
+        },
       })
 
-      setPaymentStatus({ state: "idle" })
+      setIsProcessing(false)
     } catch (error) {
-      setPaymentStatus({ state: "error", message: error.message })
+      setPaymentResult({ state: "error", message: error.message })
+      setIsProcessing(false)
     }
   }
 
@@ -199,7 +240,7 @@ export default function ProvisionalAdmissionPage() {
 
                 <select
                   value={formData.programCode}
-                  onChange={updateField("programCode")}
+                  onChange={updateProgramCode}
                   disabled={catalog.status !== "ready"}
                   className={`${inputClassName} mt-1.5 ${errors.programCode ? "border-red-400" : ""}`}
                 >
@@ -210,7 +251,7 @@ export default function ProvisionalAdmissionPage() {
                     <optgroup key={group.group} label={group.group}>
                       {group.programs.map((program) => (
                         <option key={program.code} value={program.code}>
-                          {program.name}
+                          {program.name} - {program.amountDisplay} INR
                         </option>
                       ))}
                     </optgroup>
@@ -218,6 +259,26 @@ export default function ProvisionalAdmissionPage() {
                 </select>
                 {errors.programCode && (
                   <p className="mt-1 text-xs font-semibold text-red-500">{errors.programCode}</p>
+                )}
+
+                {selectedProgram?.specializations?.length > 0 && (
+                  <div className="mt-4">
+                    <p className="text-sm font-semibold text-slate-800">Specializations</p>
+                    <p className="mt-0.5 text-xs text-slate-500">You may select more than one.</p>
+                    <div className="mt-2 flex flex-col gap-2">
+                      {selectedProgram.specializations.map((specialization) => (
+                        <label key={specialization} className="flex items-center gap-2 text-sm text-slate-700">
+                          <input
+                            type="checkbox"
+                            checked={formData.specializations.includes(specialization)}
+                            onChange={toggleSpecialization(specialization)}
+                            className="h-4 w-4 accent-brand-navy"
+                          />
+                          {specialization}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
                 )}
 
                 <label className="mt-5 block text-sm font-semibold text-slate-800">Xth Marks</label>
@@ -272,21 +333,12 @@ export default function ProvisionalAdmissionPage() {
                   <button
                     type="button"
                     onClick={handleMakePayment}
-                    disabled={paymentStatus.state === "processing"}
+                    disabled={isProcessing}
                     className="rounded-md bg-green-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {paymentStatus.state === "processing" ? "Processing…" : "Make Payment"}
+                    {isProcessing ? "Processing…" : "Make Payment"}
                   </button>
                 </div>
-
-                {paymentStatus.state === "success" && (
-                  <p className="mt-4 text-sm font-semibold text-green-700">
-                    Payment successful! Reference ID: {paymentStatus.paymentId}
-                  </p>
-                )}
-                {paymentStatus.state === "error" && (
-                  <p className="mt-4 text-sm font-semibold text-red-600">{paymentStatus.message}</p>
-                )}
               </div>
             )}
           </div>
@@ -298,6 +350,8 @@ export default function ProvisionalAdmissionPage() {
       </section>
 
       <NewsAchievementsSection />
+
+      <PaymentResultModal result={paymentResult} onClose={() => setPaymentResult(null)} />
     </>
   )
 }
