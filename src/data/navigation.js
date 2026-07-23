@@ -77,7 +77,7 @@ export const secondaryNav = [
     "Sports",
     "Regular Placement Activities",
     "Other events",
-  ]),
+  ], { linkable: false }),
   navItem("Gallery", ["Photo Gallery", "Video Gallery"]),
   navItem("LMS"),
   navItem("AI Tutor"),
